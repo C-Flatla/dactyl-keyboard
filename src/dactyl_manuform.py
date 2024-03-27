@@ -1654,8 +1654,8 @@ def make_dactyl():
         shape = rotate(shape, rot)
         shape = translate(shape, pos)
 
-        if cluster is not None and resin is False:
-            shape = cluster.get_extras(shape, pos)
+        # if cluster is not None and resin is False:
+        #     shape = cluster.get_extras(shape, pos)
 
         cutout = rotate(cutout, tb_r_offset)
         cutout = translate(cutout, tb_t_offset)
@@ -2654,4 +2654,3 @@ if __name__ == '__main__':
 
     # base = baseplate()
     # export_file(shape=base, fname=path.join(save_path, config_name + r"_plate"))
-
