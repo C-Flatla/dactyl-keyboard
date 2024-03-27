@@ -76,6 +76,7 @@ def debugprint(info):
 
 
 
+
 def make_dactyl():
     def is_side(side, param):
         return param == side or param == "both"
@@ -83,8 +84,45 @@ def make_dactyl():
     def is_oled(side):
         return oled_mount_type not in [None, "None"] and is_side(side, oled_side)
 
+    def encoder_type(side="right"):
+        if side == "right":
+            return encoder_right
+        return encoder_left
+
+    def encoder_in_wall(side="right"):
+        return encoder_type(side) != "none"
+
+    def get_descriptor_name_side(side="right"):
+        name = ""
+        if overrides_name != "":
+            name = f"{overrides_name}_"
+        if polydactyl:
+            name = f"{name}POLYDACTYL_"
+        else:
+            name = f"{name}{nrows}x{ncols}_"
+
+        type = "STANDARD_"
+
+        if all_last_rows:
+            type = "WHOLE_"
+        elif full_last_rows:
+            type = "FULL_"
+
+        name = f"{name}{type}{cluster(side).name()}_"
+
+        if is_oled(side):
+            name = f"{name}{oled_type}_"
+
+        if encoder_in_wall(side):
+            name = f"{name}{encoder_type(side).upper()}_"
+
+        name = f"{name}{side.upper()}"
+
+        return name
+
+
     def get_left_wall_offsets(side="right"):
-        is_track_or_encoder = (trackball_in_wall and is_side(side, ball_side)) or (encoder_in_wall and is_side(side, encoder_side))
+        is_track_or_encoder = (trackball_in_wall and is_side(side, ball_side)) or encoder_in_wall(side)
         wide = 22 if not is_track_or_encoder else tbiw_left_wall_x_offset_override
         short = 8  # if not is_track_or_encoder else tbiw_left_wall_x_offset_override
         offsets = [
@@ -120,7 +158,7 @@ def make_dactyl():
             offsets[nrows - 2] = wide
             offsets[nrows - 1] = wide
 
-        if (encoder_in_wall and is_side(side, encoder_side)):
+        if (encoder_in_wall(side)):
             # if oled_mount_type == None or not is_side(side, oled_side):
             #     short = 8
             # else:
@@ -1404,35 +1442,66 @@ def make_dactyl():
         def high_prep_position(sh):
             return translate(rotate(sh, (-4, -38, 10)), (6, 0, -15))
 
-        ec11_mount_high = high_prep_position(rotate(import_file(path.join(parts_path, "ec11_mount_2")), (0, 0, 90)))
+        if encoder_type(side) == "ec11":
+            # ec11_mount_high = high_prep_position(rotate(import_file(path.join(parts_path, "ec11_mount_2")), (0, 0, 90)))
+            #
+            # ec11_mount_high = key_place(ec11_mount_high, -1, 0)
 
-        ec11_mount_high = key_place(ec11_mount_high, -1, 0)
+            # ec11_mount_low = low_prep_position(rotate(import_file(path.join(parts_path, "ec11_mount_2")), (0, 0, 90)))
+            ec11_mount_low = low_prep_position(rotate(single_plate(side=side), (0, 0, 90)))
 
-        # ec11_mount_low = low_prep_position(rotate(import_file(path.join(parts_path, "ec11_mount_2")), (0, 0, 90)))
-        ec11_mount_low = low_prep_position(rotate(single_plate(side=side), (0, 0, 90)))
+            # ec11_mount_low = key_place(ec11_mount_low, -1, encoder_row)
 
-        ec11_mount_low = key_place(ec11_mount_low, -1, encoder_row)
+            # encoder_cut_high = key_place(high_prep_position(box(12, 13, 20)), -1, 0)
+            encoder_cut_low = low_prep_position(box(keyswitch_width, keyswitch_height, 20))
 
-        encoder_cut_high = key_place(high_prep_position(box(12, 13, 20)), -1, 0)
-        encoder_cut_low = key_place(low_prep_position(box(keyswitch_width, keyswitch_height, 20)), -1, encoder_row)
+            # encoder_cut_high = translate(rotate(encoder_cut_high, rot), [high[0], high[1] + 1, high[2]])
 
-        # encoder_cut_high = translate(rotate(encoder_cut_high, rot), [high[0], high[1] + 1, high[2]])
+            # enconder_spot = key_position([-10, -5, 13.5], 0, cornerrow)
+            # ec11_mount_high = import_file(path.join(parts_path, "ec11_mount_2"))
+            # ec11_mount_high = translate(rotate(ec11_mount_high, rot), high)
+            # encoder_cut_high = box(11, 13, 20)
+            # encoder_cut_high = translate(rotate(encoder_cut_high, rot), [high[0], high[1] + 1, high[2]])
+            #
+            # ec11_mount_low = import_file(path.join(parts_path, "ec11_mount_2"))
+            # ec11_mount_low = translate(rotate(ec11_mount_low, rot), low)
+            # encoder_cut_low = box(11, 13, 20)
+            # encoder_cut_low = translate(rotate(encoder_cut_low, rot), [low[0], low[1] + 1, low[2]])
 
-        # enconder_spot = key_position([-10, -5, 13.5], 0, cornerrow)
-        # ec11_mount_high = import_file(path.join(parts_path, "ec11_mount_2"))
-        # ec11_mount_high = translate(rotate(ec11_mount_high, rot), high)
-        # encoder_cut_high = box(11, 13, 20)
-        # encoder_cut_high = translate(rotate(encoder_cut_high, rot), [high[0], high[1] + 1, high[2]])
-        #
-        # ec11_mount_low = import_file(path.join(parts_path, "ec11_mount_2"))
-        # ec11_mount_low = translate(rotate(ec11_mount_low, rot), low)
-        # encoder_cut_low = box(11, 13, 20)
-        # encoder_cut_low = translate(rotate(encoder_cut_low, rot), [low[0], low[1] + 1, low[2]])
+            shape = difference(shape, [encoder_cut_low])
+            shape = union([shape, ec11_mount_low])
+            # encoder_mount = translate(rotate(encoder_mount, (0, 0, 20)), (-27, -4, -15))
+            return shape
+        elif encoder_type(side) == "wheel":
+            wheel_width = 17.3
+            wheel_height = 15
+            wheel_cut_low = box(wheel_width, wheel_height, 8)
+            wheel_mount_low = translate(difference(box(wheel_width + 4, wheel_height + 4, 3), [wheel_cut_low]), (0, 0, -2))
+            # wheel_cut_low = key_place(box(17.2, 13.5, 8), -1, encoder_row)
 
-        shape = difference(shape, [encoder_cut_low])
-        shape = union([shape, ec11_mount_low])
-        # encoder_mount = translate(rotate(encoder_mount, (0, 0, 20)), (-27, -4, -15))
-        return shape
+            wheel_cut_low = low_prep_position(wheel_cut_low)
+            wheel_mount_low = low_prep_position(wheel_mount_low)
+            # encoder_cut_low = key_place(low_prep_position(box(keyswitch_width, keyswitch_height, 20)), -1, encoder_row)
+
+            # encoder_cut_high = translate(rotate(encoder_cut_high, rot), [high[0], high[1] + 1, high[2]])
+
+            # enconder_spot = key_position([-10, -5, 13.5], 0, cornerrow)
+            # ec11_mount_high = import_file(path.join(parts_path, "ec11_mount_2"))
+            # ec11_mount_high = translate(rotate(ec11_mount_high, rot), high)
+            # encoder_cut_high = box(11, 13, 20)
+            # encoder_cut_high = translate(rotate(encoder_cut_high, rot), [high[0], high[1] + 1, high[2]])
+            #
+            # ec11_mount_low = import_file(path.join(parts_path, "ec11_mount_2"))
+            # ec11_mount_low = translate(rotate(ec11_mount_low, rot), low)
+            # encoder_cut_low = box(11, 13, 20)
+            # encoder_cut_low = translate(rotate(encoder_cut_low, rot), [low[0], low[1] + 1, low[2]])
+
+            shape = difference(shape, [wheel_cut_low])
+            shape = union([shape, wheel_mount_low])
+            export_file(shape=wheel_mount_low, fname=path.join(r".", "things", r"wheel_encoder_mount"))
+            # shape = union([shape, ec11_mount_low])
+            # encoder_mount = translate(rotate(encoder_mount, (0, 0, 20)), (-27, -4, -15))
+            return shape
 
     def usb_c_shape(width, height, depth):
         shape = box(width, depth, height)
@@ -2258,13 +2327,15 @@ def make_dactyl():
                 hole, frame = oled_sliding_mount_frame(side=side)
                 shape = difference(shape, [hole])
                 shape = union([shape, frame])
-                if encoder_in_wall:
-                    shape = encoder_wall_mount(shape, side)
+
 
             elif oled_mount_type == "CLIP":
                 hole, frame = oled_clip_mount_frame(side=side)
                 shape = difference(shape, [hole])
                 shape = union([shape, frame])
+
+        if encoder_in_wall(side):
+            shape = encoder_wall_mount(shape, side)
 
         if not quickly:
             if trackball_in_wall and is_side(side, ball_side):
@@ -2462,22 +2533,26 @@ def make_dactyl():
 
 
     def run():
+        right_name = get_descriptor_name_side(side="right")
+        left_name = get_descriptor_name_side(side="left")
         mod_r, walls_r = model_side(side="right")
         if resin and ENGINE == "cadquery":
             mod_r = rotate(mod_r, (333.04, 43.67, 85.00))
-        export_file(shape=mod_r, fname=path.join(save_path, r_config_name + r"_right"))
+        export_file(shape=mod_r, fname=path.join(save_path, right_name + r"_TOP"))
 
+        # print(f"Right descriptor name: {get_descriptor_name_side(side='right')}")
+        # print(f"Left descriptor name: {get_descriptor_name_side(side='left')}")
         if right_side_only:
             print(">>>>>  RIGHT SIDE ONLY: Only rendering a the right side.")
             return
         base = baseplate(walls_r, side='right')
         # rest = wrist_rest(mod_r, base, side="right")
         # base = union([base, rest])
-        export_file(shape=base, fname=path.join(save_path, r_config_name + r"_right_plate"))
+        export_file(shape=base, fname=path.join(save_path, right_name + r"_PLATE"))
         if quickly:
             print(">>>>>  QUICK RENDER: Only rendering a the right side and bottom plate.")
             return
-        export_dxf(shape=base, fname=path.join(save_path, r_config_name + r"_right_plate"))
+        export_dxf(shape=base, fname=path.join(save_path, right_name + r"_PLATE"))
 
         # rest = wrist_rest(mod_r, base, side="right")
         #
@@ -2488,11 +2563,11 @@ def make_dactyl():
         mod_l, walls_l = model_side(side="left")
         if resin and ENGINE == "cadquery":
             mod_l = rotate(mod_l, (333.04, 317.33, 286.35))
-        export_file(shape=mod_l, fname=path.join(save_path, l_config_name + r"_left"))
+        export_file(shape=mod_l, fname=path.join(save_path, left_name + r"_TOP"))
 
         base_l = mirror(baseplate(walls_l, side='left'), 'YZ')
-        export_file(shape=base_l, fname=path.join(save_path, l_config_name + r"_left_plate"))
-        export_dxf(shape=base_l, fname=path.join(save_path, l_config_name + r"_left_plate"))
+        export_file(shape=base_l, fname=path.join(save_path, left_name + r"_PLATE"))
+        export_dxf(shape=base_l, fname=path.join(save_path, left_name + r"_PLATE"))
 
         # else:
         #     export_file(shape=mirror(mod_r, 'YZ'), fname=path.join(save_path, config_name + r"_left"))
